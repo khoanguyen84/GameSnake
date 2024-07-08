@@ -7,9 +7,14 @@ class Program
     static readonly string BRICK_SYMBOL = "#";
     static readonly string SPACE_SYMBOL = " ";
     static readonly string SNAKE_SYMBOL = "*";
-    static readonly int speed = 500;
-    static readonly int rows = 15;
-    static int cols = 30;
+    static readonly string FOOD_SYMBOL = "@";
+    static bool isExistFood = false;
+    static int food_x = -1;
+    static int food_y = -1;
+    static int score = 0;
+    static int speed = 500;
+    static readonly int rows = 20;
+    static int cols = 40;
     static string[,] board = new string[rows, cols];
     static int[] headSnake = new int[2] { 1, 1 };
     static int[][] bodySnake = new int[2][]
@@ -17,18 +22,28 @@ class Program
         new int[2] {-1, -1},
         new int[2] {-1, -1}
     };
+
     static void Main(string[] args)
     {
         Thread gameThread = new Thread(ListenKey);
         gameThread.Start();
-        while (true)
+
+        while (!gameOver)
         {
             Console.Clear();
             ResetBoard();
             DrawSnake();
+            RandomFood();
             DrawBoard();
             SnakeMoving(direction);
             Task.Delay(speed).Wait();
+        }
+        if (gameOver)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Game over");
+            Console.ResetColor();
+            Environment.Exit(0);
         }
     }
 
@@ -42,9 +57,13 @@ class Program
                 {
                     board[x, y] = BRICK_SYMBOL;
                 }
+                else if (x == food_x && y == food_y)
+                {
+                    board[x, y] = FOOD_SYMBOL;
+                }
                 else
                 {
-                    board[x, y] = SNAKE_SYMBOL;
+                    board[x, y] = SPACE_SYMBOL;
                 }
             }
         }
@@ -66,7 +85,22 @@ class Program
                 }
                 else if (value.Equals(SNAKE_SYMBOL))
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    if (x == headSnake[0] && y == headSnake[1])
+                    {
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.Write(value);
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Write(value);
+                        Console.ResetColor();
+                    }
+                }
+                else if (value.Equals(FOOD_SYMBOL))
+                {
+                    Console.ForegroundColor = ConsoleColor.White;
                     Console.Write(value);
                     Console.ResetColor();
                 }
@@ -77,6 +111,7 @@ class Program
             }
             Console.WriteLine();
         }
+        Console.WriteLine($"Score: {score}");
     }
 
     static void DrawSnake()
@@ -101,52 +136,57 @@ class Program
             }
         }
     }
+
     static void SnakeMoving(string direction)
     {
-        int current_x;
-        int current_y;
+        //Check Game is Over
+        CheckGameIsOver();
+
+        int head_snake_x;
+        int head_snake_y;
         switch (direction)
         {
             case "RIGHT":
-                current_y = headSnake[1];
-                headSnake[1] = current_y + 1;
+                head_snake_y = headSnake[1];
+                headSnake[1] = head_snake_y + 1;
                 if (headSnake[1] == cols - 1)
                 {
                     headSnake[1] = 1;
                 }
-                BodySnakeMoving(headSnake[0], current_y);
+                BodySnakeMoving(headSnake[0], head_snake_y);
                 break;
             case "LEFT":
-                current_y = headSnake[1];
-                headSnake[1] = current_y - 1;
+                head_snake_y = headSnake[1];
+                headSnake[1] = head_snake_y - 1;
                 if (headSnake[1] == 0)
                 {
                     headSnake[1] = cols - 2;
                 }
-                BodySnakeMoving(headSnake[0], current_y);
+                BodySnakeMoving(headSnake[0], head_snake_y);
                 break;
             case "DOWN":
-                current_x = headSnake[0];
-                headSnake[0] = current_x + 1;
+                head_snake_x = headSnake[0];
+                headSnake[0] = head_snake_x + 1;
                 if (headSnake[0] == rows - 1)
                 {
                     headSnake[0] = 1;
                 }
-                BodySnakeMoving(current_x, headSnake[1]);
+                BodySnakeMoving(head_snake_x, headSnake[1]);
                 break;
             case "UP":
-                current_x = headSnake[0];
-                headSnake[0] = current_x - 1;
+                head_snake_x = headSnake[0];
+                headSnake[0] = head_snake_x - 1;
                 if (headSnake[0] == 0)
                 {
                     headSnake[0] = rows - 2;
                 }
-                BodySnakeMoving(current_x, headSnake[1]);
+                BodySnakeMoving(head_snake_x, headSnake[1]);
                 break;
             default:
                 break;
-
         }
+        //Eat Food
+        EatFood();
     }
 
     static void BodySnakeMoving(int body_x, int body_y)
@@ -161,12 +201,12 @@ class Program
             body_y = tmp_body_y;
         }
     }
+
     static void ListenKey()
     {
         while (!gameOver)
         {
             ConsoleKeyInfo keyInfo = Console.ReadKey();
-            Console.WriteLine(direction);
             switch (keyInfo.Key)
             {
                 case ConsoleKey.RightArrow:
@@ -195,6 +235,56 @@ class Program
                     break;
                 default:
                     break;
+            }
+        }
+    }
+
+    static void RandomFood()
+    {
+        if (!isExistFood)
+        {
+            do
+            {
+                Random random = new();
+                food_x = random.Next(1, rows - 2);
+                food_y = random.Next(1, cols - 2);
+                isExistFood = true;
+            }
+            while(FoodInSnake());
+        }
+    }
+
+    static bool FoodInSnake()
+    {
+        foreach(int[] body in bodySnake)
+        {
+            if(body[0] == food_x && body[1] == food_y)
+            {
+                return true;
+            }
+        }
+        return headSnake[0] == food_x && headSnake[1] == food_y;
+    }
+
+    static void EatFood()
+    {
+        if (headSnake[0] == food_x && headSnake[1] == food_y)
+        {
+            score++;
+            speed -= 10;
+            Array.Resize(ref bodySnake, bodySnake.Length + 1);
+            bodySnake[bodySnake.Length - 1] = new int[] { -1, -1 };
+            isExistFood = false;
+        }
+    }
+
+    static void CheckGameIsOver()
+    {
+        foreach (int[] body in bodySnake)
+        {
+            if (body[0] == headSnake[0] && body[1] == headSnake[1])
+            {
+                gameOver = true;
             }
         }
     }
