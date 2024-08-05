@@ -22,7 +22,10 @@ class Program
         new int[2] {-1, -1},
         new int[2] {-1, -1}
     };
-
+    static DateTime startTime = DateTime.Now;
+    static DateTime endTime;
+    static int durationTime = 0;
+    static string directory = @"d:/";
     static void Main(string[] args)
     {
         Thread gameThread = new Thread(ListenKey);
@@ -45,7 +48,19 @@ class Program
             Console.ResetColor();
             Environment.Exit(0);
         }
+
+        // FileWriter(Path.Combine(directory, "history.txt"), FileMode.Append, "Khoa");
+        // FileWriter(Path.Combine(directory, "log.txt"), FileMode.Create, "Nguyễn");
     }
+
+    // static void FileWriter(string path, FileMode mode, string data)
+    // {
+    //     FileStream fs = new FileStream(path, mode);
+    //     using (StreamWriter sw = new StreamWriter(fs))
+    //     {
+    //         sw.WriteLine(data);
+    //     }
+    // }
 
     static void ResetBoard()
     {
@@ -79,7 +94,7 @@ class Program
                 if (value.Equals(BRICK_SYMBOL))
                 {
                     Console.ForegroundColor = ConsoleColor.White;
-                    Console.BackgroundColor = ConsoleColor.Red;
+                    // Console.BackgroundColor = ConsoleColor.Red;
                     Console.Write(value);
                     Console.ResetColor();
                 }
@@ -112,6 +127,7 @@ class Program
             Console.WriteLine();
         }
         Console.WriteLine($"Score: {score}");
+        ShowTimer();
     }
 
     static void DrawSnake()
@@ -189,16 +205,16 @@ class Program
         EatFood();
     }
 
-    static void BodySnakeMoving(int body_x, int body_y)
+    static void BodySnakeMoving(int head_snake_x, int head_snake_y)
     {
         for (int b = 0; b < bodySnake.Length; b++)
         {
             int tmp_body_x = bodySnake[b][0];
             int tmp_body_y = bodySnake[b][1];
-            bodySnake[b][0] = body_x;
-            bodySnake[b][1] = body_y;
-            body_x = tmp_body_x;
-            body_y = tmp_body_y;
+            bodySnake[b][0] = head_snake_x;
+            bodySnake[b][1] = head_snake_y;
+            head_snake_x = tmp_body_x;
+            head_snake_y = tmp_body_y;
         }
     }
 
@@ -250,15 +266,15 @@ class Program
                 food_y = random.Next(1, cols - 2);
                 isExistFood = true;
             }
-            while(FoodInSnake());
+            while (FoodInSnake());
         }
     }
 
     static bool FoodInSnake()
     {
-        foreach(int[] body in bodySnake)
+        foreach (int[] body in bodySnake)
         {
-            if(body[0] == food_x && body[1] == food_y)
+            if (body[0] == food_x && body[1] == food_y)
             {
                 return true;
             }
@@ -271,7 +287,7 @@ class Program
         if (headSnake[0] == food_x && headSnake[1] == food_y)
         {
             score++;
-            speed -= 10;
+            speed = speed > 10 ? speed - 10 : 0;
             Array.Resize(ref bodySnake, bodySnake.Length + 1);
             bodySnake[bodySnake.Length - 1] = new int[] { -1, -1 };
             isExistFood = false;
@@ -287,5 +303,12 @@ class Program
                 gameOver = true;
             }
         }
+    }
+
+    static void ShowTimer()
+    {
+        endTime = DateTime.Now;
+        durationTime = Convert.ToInt32(Math.Round((endTime - startTime).TotalSeconds, 0));
+        Console.WriteLine($"{TimeSpan.FromSeconds(durationTime)}");
     }
 }
